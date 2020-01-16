@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+  <input type="file" onchange="change(this)">
+  <button onclick="upload()">上传</button>
+  <button onclick="mergeBlob()">merge</button>
+  <script>
+    const data = {
+      container: {
+        file: null
+      }
+    }
+    const length = 10
+    const url = 'http://127.0.0.1:3000'
+    
+    function change(e) {
+      const [file] = e.files
+      if (!file) return
+
+      data.container.file = file
+    }
+
+    function sliceBlob() {
+      const file = data.container.file
+      const fileChunkList = []
+      const chunkSize = Math.ceil(file.size / length)
+      let cur = 0
+      while (cur < file.size) {
+        fileChunkList.push({
+          file: file.slice(cur, cur + chunkSize)
+        })
+        cur += chunkSize
+      }
+      
+      return fileChunkList
+    }
+
+    async function upload() {
+      const fileChunkList = sliceBlob().map(({file}, index) => ({
+        chunk: file,
+        hash: data.container.file.name + '-' + index
+      }))
+
+      await requestServer(fileChunkList)
+      await mergeBlob()
+    }
+
+    function requestServer(fileChunkList) {
+      const fileChunkLists = fileChunkList.map(({ chunk, hash }) => {
+        const formData = new FormData()
+        formData.append('chunk', chunk)
+        formData.append('hash', hash)
+        formData.append('filename', data.container.file.name)
+
+        return { formData }
+      }).map(async ({ formData }) => {
+        return request(formData)
+      })
+
+      return Promise.all(fileChunkLists)
+    }
+
+    function request(data) {
+      fetch(url, {
+        method: 'post',
+        body: data
+      }).then(res => {
+        return res.json()
+      })
+    }
+
+    function mergeBlob() {
+      fetch(url + '/merge', {
+        method: 'post'
+      }).then(res => {
+        return res.json()
+      })
+    }
+  </script>
+</body>
+</html>
