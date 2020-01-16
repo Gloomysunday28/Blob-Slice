@@ -48,7 +48,9 @@
       }))
 
       await requestServer(fileChunkList)
-      await mergeBlob()
+      setTimeout(() => {
+        mergeBlob()
+      }, 100)
     }
 
     function requestServer(fileChunkList) {

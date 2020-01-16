@@ -4,9 +4,8 @@ const Koa = require('Koa')
 const body = require('koa-body')
 const Router = require('koa-router')
 const app = new Koa()
-const fse = require("fs-extra");
 const static = require('koa-static')
-const UPLOAD_DIR = path.resolve(__dirname, "..", "target")
+
 app.use(body({
   multipart: true // 是否支持multipart-formdata表单数据，
 }))
@@ -15,9 +14,10 @@ app.use(static(path.resolve(__dirname, '../frontend')))
 const router = new Router()
 router.post('/', async (ctx) => {
   const { chunk } = ctx.request.files
-  const { filename, hash } = ctx.request.body
+  const { hash } = ctx.request.body
   const chunkDir = path.resolve(__dirname, './files', `${hash}`);
-  fs.createReadStream(chunk.path).pipe(fs.createWriteStream(chunkDir))
+  await fs.createReadStream(chunk.path).pipe(fs.createWriteStream(chunkDir, 'utf-8'))
+  ctx.status = 200
   ctx.body = {
     status: 200,
     message: 'Ok'
@@ -26,12 +26,11 @@ router.post('/', async (ctx) => {
 
 router.post('merge', async (ctx) => {
   const chunkDir = path.resolve(__dirname, './files')
-  const mergePath = path.resolve(__dirname, 'merge/merge.xlsx')
-  await fs.writeFile(mergePath, "")
+  const mergePath = path.resolve(__dirname, 'merge/线上IP信息.xlsx')
+  await fs.writeFileSync(mergePath, "")
   fs.readdir(chunkDir, (err, files) => {
-    console.log(files)
     files.forEach(async file => {
-      fs.appendFile(mergePath, await fs.readFileSync(path.resolve(chunkDir, file), 'utf-8'))
+      await fs.appendFileSync(mergePath, fs.readFileSync(path.resolve(chunkDir, file)))
     })
   })
   
